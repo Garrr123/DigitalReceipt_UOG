@@ -1,0 +1,1 @@
+All receipts generated here

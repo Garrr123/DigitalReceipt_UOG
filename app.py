@@ -1,57 +1,53 @@
-# Copyright 2021 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""
+Purpose of RESTful_API.py
 
-import signal
-import sys
-from types import FrameType
+Handle API calls
 
-from flask import Flask,render_template
+    -   POST generateReceipt
+            - INPUT:  JSON input to generate receipt
+            - PROCESS : Generate Receipt from JSON
+            - RETURN : QR code image , ID of receipt
+            -
 
-# from utils.logging import logger
+    -   GET receiptQR
+            - INPUT:  ID of reciept
+            - PROCESS : Search for receipt if exists
+            - RETURN : QR code image (if exists)
+
+    -   GET receipt
+        - INPUT:  ID of reciept
+        - RETURN : return website to download and preivew receipt
+
+    -   GET downloadReceipt
+        - INPUT : ID of Receipt
+        - PROCESS : facilitate the download of Reciept
+
+
+"""
+
+from flask import Flask, render_template,make_response
+import pdfkit
 
 app = Flask(__name__)
 
+config = pdfkit.configuration(wkhtmltopdf="wkhtmltopdf\\bin\\wkhtmltopdf.exe")
 
-@app.route("/")
-def hello() -> str:
-    # # Use basic logging with custom fields
-    # logger.info(logField="custom-entry", arbitraryField="custom-entry")
-
-    # # https://cloud.google.com/run/docs/logging#correlate-logs
-    # logger.info("Child logger with trace Id.")
-
-    return render_template("index.html")
+# path_wkhtmltopdf = "C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe"
+# config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+@app.route('/')
+def home():
+    return render_template('index.html')
 
 
-def shutdown_handler(signal_int: int, frame: FrameType) -> None:
-    # logger.info(f"Caught Signal {signal.strsignal(signal_int)}")
+@app.route("/pdf/")
+def index():
+    # installed https://wkhtmltopdf.org/
+    html = render_template("index.html")
+    pdf = pdfkit.from_string(html,configuration=config)
+    response = make_response(pdf)
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = "inline; filename=output.pdf"
+    return response
 
-    # from utils.logging import flush
-
-    # flush()
-
-    # Safely exit program
-    sys.exit(0)
-
-
-if __name__ == "__main__":
-    # Running application locally, outside of a Google Cloud Environment
-
-    # handles Ctrl-C termination
-    signal.signal(signal.SIGINT, shutdown_handler)
-
-    app.run(host="localhost", port=8080, debug=True)
-else:
-    # handles Cloud Run container termination
-    signal.signal(signal.SIGTERM, shutdown_handler)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
